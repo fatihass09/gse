@@ -817,9 +817,16 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;
   document.getElementById('copyAddr').addEventListener('click',()=>copyText('No. 100A, Jalan Wawasan Dagangan 1, Bandar Behrang, 35900 Tg. Malim, Perak Darul Ridzuan',document.getElementById('copyNote'),document.getElementById('addr')));
 
   /* ---------- form ---------- */
-  /* ---------- enquiry form: emails the company through FormSubmit ---------- */
-  const ENQUIRY_ENDPOINT='https://formsubmit.co/ajax/greatskills.ent@gmail.com';
+  /* ---------- enquiry form: emails the company ----------
+     With a Web3Forms access key set, enquiries go through Web3Forms; otherwise through FormSubmit. */
+  const WEB3FORMS_KEY='';
+  const COMPANY_EMAIL='greatskills.ent@gmail.com';
   const qf=document.getElementById('quote');
+  function enquiryRequest(f){
+    const subject='Website enquiry: '+f['Enquiry type']+' from '+f.Name;
+    if(WEB3FORMS_KEY) return ['https://api.web3forms.com/submit',{access_key:WEB3FORMS_KEY,subject,from_name:'Great Skills Enterprise website',replyto:f.Email,...f}];
+    return ['https://formsubmit.co/ajax/'+COMPANY_EMAIL,{_subject:subject,_template:'table',_captcha:'false',_replyto:f.Email,...f}];
+  }
   qf.addEventListener('submit',async e=>{
     e.preventDefault();
     const val=id=>document.getElementById(id).value.trim();
@@ -827,19 +834,17 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;
     if(!val('q-name')||!m.value||!m.validity.valid){out.textContent='Add your name and a valid email so we can reply.';return}
     if(val('q-hp')) return;
     btn.disabled=true; out.textContent='Sending your enquiry…';
+    const [url,body]=enquiryRequest({Name:val('q-name'),Organisation:val('q-co')||'-',Email:val('q-email'),'Enquiry type':val('q-type'),Details:val('q-msg')||'-'});
     try{
-      const r=await fetch(ENQUIRY_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({
-        _subject:'Website enquiry: '+val('q-type')+' from '+val('q-name'),
-        _template:'table', _captcha:'false', _replyto:val('q-email'),
-        Name:val('q-name'), Organisation:val('q-co')||'-', Email:val('q-email'), 'Enquiry type':val('q-type'), Details:val('q-msg')||'-'
-      })});
+      const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(body)});
       const d=await r.json().catch(()=>({}));
-      if(/activat/i.test(d.message||'')){out.textContent='Thank you. The company email is still being set up, so please also email greatskills.ent@gmail.com or call +60 13-519 0062.';return}
-      if(!r.ok||d.success===false||d.success==='false') throw new Error(d.message||'Send failed');
+      if(/activat/i.test(d.message||'')){out.textContent='Thank you. The company email is still being set up, so please also email '+COMPANY_EMAIL+' or call +60 13-519 0062.';return}
+      if(!r.ok||d.success===false||d.success==='false') throw new Error(d.message||('HTTP '+r.status));
       qf.reset();
       out.textContent='Thank you. Your enquiry has been sent to Great Skills Enterprise and we will reply by email.';
     }catch(err){
-      out.textContent='Your enquiry could not be sent from this page. Please email greatskills.ent@gmail.com or call +60 13-519 0062.';
+      console.warn('Enquiry send failed:',err);
+      out.textContent='Your enquiry could not be sent from this page ('+(err.message||'network error')+'). Please email '+COMPANY_EMAIL+' or call +60 13-519 0062.';
     }finally{btn.disabled=false}
   });
 })();
