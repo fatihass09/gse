@@ -617,6 +617,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;
         <label for="q-email">Email<input id="q-email" name="email" type="email" required placeholder="you@example.com"></label>
         <label for="q-type">Enquiry type<select id="q-type" name="type"><option>Civil works</option><option>Building maintenance</option><option>Road maintenance</option><option>ICT works</option><option>Training course</option><option>Supply</option></select></label>
       </div>
+      <input id="q-hp" name="_honey" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px">
       <label for="q-msg">Details<textarea id="q-msg" name="msg" placeholder="Location, scope of work and target dates"></textarea></label>
       <button class="btn" type="submit">Send enquiry <span class="arr">→</span></button>
       <p class="sent" id="sent" role="status"></p>
@@ -816,11 +817,29 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;
   document.getElementById('copyAddr').addEventListener('click',()=>copyText('No. 100A, Jalan Wawasan Dagangan 1, Bandar Behrang, 35900 Tg. Malim, Perak Darul Ridzuan',document.getElementById('copyNote'),document.getElementById('addr')));
 
   /* ---------- form ---------- */
-  document.getElementById('quote').addEventListener('submit',e=>{
+  /* ---------- enquiry form: emails the company through FormSubmit ---------- */
+  const ENQUIRY_ENDPOINT='https://formsubmit.co/ajax/greatskills.ent@gmail.com';
+  const qf=document.getElementById('quote');
+  qf.addEventListener('submit',async e=>{
     e.preventDefault();
-    const n=document.getElementById('q-name'), m=document.getElementById('q-email'), out=document.getElementById('sent');
-    if(!n.value.trim()||!m.validity.valid||!m.value){out.textContent='Add your name and a valid email so we can reply.';return}
-    out.textContent='Thank you, '+n.value.trim().split(' ')[0]+'. This preview cannot send messages yet. Please email greatskills.ent@gmail.com or call +60 13-519 0062.';
+    const val=id=>document.getElementById(id).value.trim();
+    const m=document.getElementById('q-email'), out=document.getElementById('sent'), btn=qf.querySelector('button[type="submit"]');
+    if(!val('q-name')||!m.value||!m.validity.valid){out.textContent='Add your name and a valid email so we can reply.';return}
+    if(val('q-hp')) return;
+    btn.disabled=true; out.textContent='Sending your enquiry…';
+    try{
+      const r=await fetch(ENQUIRY_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({
+        _subject:'Website enquiry: '+val('q-type')+' from '+val('q-name'),
+        _template:'table', _captcha:'false', _replyto:val('q-email'),
+        Name:val('q-name'), Organisation:val('q-co')||'-', Email:val('q-email'), 'Enquiry type':val('q-type'), Details:val('q-msg')||'-'
+      })});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok||d.success===false||d.success==='false') throw new Error(d.message||'Send failed');
+      qf.reset();
+      out.textContent='Thank you. Your enquiry has been sent to Great Skills Enterprise and we will reply by email.';
+    }catch(err){
+      out.textContent='Your enquiry could not be sent from this page. Please email greatskills.ent@gmail.com or call +60 13-519 0062.';
+    }finally{btn.disabled=false}
   });
 })();
 </script>
