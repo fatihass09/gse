@@ -834,6 +834,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;
         Name:val('q-name'), Organisation:val('q-co')||'-', Email:val('q-email'), 'Enquiry type':val('q-type'), Details:val('q-msg')||'-'
       })});
       const d=await r.json().catch(()=>({}));
+      if(/activat/i.test(d.message||'')){out.textContent='Thank you. The company email is still being set up, so please also email greatskills.ent@gmail.com or call +60 13-519 0062.';return}
       if(!r.ok||d.success===false||d.success==='false') throw new Error(d.message||'Send failed');
       qf.reset();
       out.textContent='Thank you. Your enquiry has been sent to Great Skills Enterprise and we will reply by email.';
