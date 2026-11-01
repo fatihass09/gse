@@ -418,7 +418,7 @@ textarea{min-height:110px;resize:vertical}
 .proc-ctl{display:flex;align-items:center;justify-content:space-between;margin-top:12px;font-family:var(--f-mono);font-size:12px;color:#5a5254;letter-spacing:.06em;text-transform:uppercase}
 .proc-ctl button{background:none;border:1px solid var(--line-light);font:inherit;padding:6px 12px;cursor:pointer;color:var(--black)}
 .proc-ctl button:hover{border-color:var(--crimson);color:var(--crimson)}
-@media (max-width:900px){.proc{grid-template-columns:minmax(0,1fr)}.steps{grid-template-columns:repeat(2,minmax(0,1fr))}.steps button{grid-template-columns:32px 1fr;padding:8px}.steps .n{width:30px;height:30px}.steps small{display:none}}
+@media (max-width:900px){.proc{grid-template-columns:minmax(0,1fr)}.steps{grid-template-columns:repeat(2,minmax(0,1fr))}.steps button{grid-template-columns:32px 1fr;padding:8px}.steps .n{width:30px;height:30px}.steps small{display:none}.steps li:last-child{grid-column:1/-1}}
 @media (prefers-reduced-motion:reduce){.st-crane .jib{animation:none}}
 
 footer{background:var(--black);border-top:4px solid var(--crimson);padding-block:36px 30px;color:var(--grey);font-size:14px}
@@ -612,16 +612,15 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;
   <g class="st-plan" font-family="IBM Plex Mono,monospace" font-size="10" fill="#9b0c15"><g stroke="#9b0c15" stroke-width="1"><path d="M155 395H445M155 389V401M445 389V401"/><path d="M480 120V360M474 120H486M474 360H486"/><path d="M155 190H130M155 260H130M155 120H130" stroke-dasharray="3 3"/></g>
     <text x="300" y="410" text-anchor="middle">30.0 m</text><text x="486" y="244">12.0 m</text><text x="96" y="124">L3</text><text x="96" y="194">L2</text><text x="96" y="264">L1</text>
     <circle cx="160" cy="34" r="9" fill="none" stroke="#9b0c15"/><text x="160" y="38" text-anchor="middle">A</text><path d="M160 43V118" stroke="#9b0c15" stroke-dasharray="2 4"/><circle cx="230" cy="34" r="9" fill="none" stroke="#9b0c15"/><text x="230" y="38" text-anchor="middle">B</text><path d="M230 43V118" stroke="#9b0c15" stroke-dasharray="2 4"/><circle cx="300" cy="34" r="9" fill="none" stroke="#9b0c15"/><text x="300" y="38" text-anchor="middle">C</text><path d="M300 43V118" stroke="#9b0c15" stroke-dasharray="2 4"/><circle cx="370" cy="34" r="9" fill="none" stroke="#9b0c15"/><text x="370" y="38" text-anchor="middle">D</text><path d="M370 43V118" stroke="#9b0c15" stroke-dasharray="2 4"/><circle cx="440" cy="34" r="9" fill="none" stroke="#9b0c15"/><text x="440" y="38" text-anchor="middle">E</text><path d="M440 43V118" stroke="#9b0c15" stroke-dasharray="2 4"/></g>
-</svg><span class="stamp" id="stamp">Stage 0 / 6</span></div>
+</svg><span class="stamp" id="stamp">Stage 0 / 5</span></div>
       </div>
       <div>
         <ol class="steps" id="steps">
           <li><button type="button" data-s="1"><span class="n">01</span><span><b>Sketch</b><small>Concept lines drawn by hand</small></span></button></li>
           <li><button type="button" data-s="2"><span class="n">02</span><span><b>Design</b><small>Gridlines, levels and dimensions</small></span></button></li>
-          <li><button type="button" data-s="3"><span class="n">03</span><span><b>Structure</b><small>Foundation, columns and slabs</small></span></button></li>
-          <li><button type="button" data-s="4"><span class="n">04</span><span><b>Walls &amp; roof</b><small>Brickwork, scaffolding and roofing</small></span></button></li>
-          <li><button type="button" data-s="5"><span class="n">05</span><span><b>Finishes</b><small>Windows, doors and signage</small></span></button></li>
-          <li><button type="button" data-s="6"><span class="n">06</span><span><b>Handover</b><small>Landscaping, road and completion</small></span></button></li>
+          <li><button type="button" data-s="3"><span class="n">03</span><span><b>Construct</b><small>Foundation, structure, walls and roof</small></span></button></li>
+          <li><button type="button" data-s="4"><span class="n">04</span><span><b>Finishes</b><small>Windows, doors and signage</small></span></button></li>
+          <li><button type="button" data-s="5"><span class="n">05</span><span><b>Handover</b><small>Landscaping, road and completion</small></span></button></li>
         </ol>
         <div class="proc-bar"><span id="procBar"></span></div>
         <div class="proc-ctl"><span id="procLabel">Ready</span><button type="button" id="procPlay">Pause</button></div>
@@ -915,19 +914,23 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;
   /* ---------- process: building from sketch to handover ---------- */
   (function(){
     const bd=document.getElementById('build'), btns=[...document.querySelectorAll('#steps button')], bar=document.getElementById('procBar'), lab=document.getElementById('procLabel'), play=document.getElementById('procPlay'), stamp=document.getElementById('stamp');
-    const names=['Ready','Sketch','Design','Structure','Walls & roof','Finishes','Handover complete'];
-    let st=0, timer=null, playing=!reduce;
+    const names=['Ready','Sketch','Design','Construct','Finishes','Handover complete'];
+    const LEVEL=[0,1,2,4,5,6]; // step → drawing layers shown (Construct covers structure, walls and roof)
+    let st=0, timer=null, playing=!reduce, sub=null;
+    function layers(L){ for(let i=1;i<=6;i++) bd.classList.toggle('s'+i,i<=L); }
     function show(n){
-      st=n; for(let i=1;i<=6;i++) bd.classList.toggle('s'+i,i<=n);
+      clearTimeout(sub); const L=LEVEL[n];
+      if(L===4&&!bd.classList.contains('s3')&&!reduce){ layers(3); sub=setTimeout(()=>layers(4),1300); } else layers(L);
+      st=n;
       btns.forEach((b,i)=>{b.classList.toggle('done',i+1<n);b.classList.toggle('cur',i+1===n);b.setAttribute('aria-current',i+1===n?'step':'false')});
-      bar.style.width=(n/6*100)+'%'; lab.textContent=names[n]; stamp.textContent='Stage '+n+' / 6';
+      bar.style.width=(n/5*100)+'%'; lab.textContent=names[n]; stamp.textContent='Stage '+n+' / 5';
     }
-    function tick(){ show(st>=6?0:st+1); timer=setTimeout(tick, st===6?4200:st===0?900:2300); }
+    function tick(){ show(st>=5?0:st+1); timer=setTimeout(tick, st===5?4200:st===0?900:st===3?3200:2300); }
     function start(){ clearTimeout(timer); playing=true; play.textContent='Pause'; timer=setTimeout(tick,600); }
     function stop(){ clearTimeout(timer); playing=false; play.textContent='Play'; }
     btns.forEach(b=>b.addEventListener('click',()=>{stop();show(+b.dataset.s)}));
     play.addEventListener('click',()=>playing?stop():start());
-    if(reduce){show(6);play.textContent='Play';return}
+    if(reduce){show(5);play.textContent='Play';return}
     show(0);
     if('IntersectionObserver' in window){
       const io=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ if(playing&&!timer) start(); } else if(playing){clearTimeout(timer);timer=null;} }),{threshold:.35});
