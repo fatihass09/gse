@@ -952,55 +952,100 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;
 
   /* ---------- hero: 3D building, spinning ---------- */
   (function(){
-    const cv=document.getElementById('b3d'); const gone=()=>{cv.remove();const h=document.getElementById('b3dHint');if(h)h.remove()};
-    if(!cv) return; if(!window.THREE){gone();return}
+    const cv=document.getElementById('b3d'); if(!cv) return;
+    const gone=()=>{cv.remove();const h=document.getElementById('b3dHint');if(h)h.remove()};
+    if(!window.THREE){gone();return}
     const T=THREE, art=cv.parentElement;
     let R; try{ R=new T.WebGLRenderer({canvas:cv,antialias:true,alpha:true}); }catch(e){ gone(); return; }
     R.setPixelRatio(Math.min(2,devicePixelRatio||1));
+    R.shadowMap.enabled=true; R.shadowMap.type=T.PCFSoftShadowMap;
     art.classList.add('is3d');
     const scene=new T.Scene(), cam=new T.PerspectiveCamera(32,1,.1,100);
-    scene.add(new T.HemisphereLight(0xffffff,0x8a7f80,.7));
-    const sun=new T.DirectionalLight(0xffffff,.8); sun.position.set(5,9,7); scene.add(sun);
-    const M=c=>new T.MeshStandardMaterial({color:c,roughness:.8,metalness:.05});
-    const edgeMat=new T.LineBasicMaterial({color:0x2a2627,transparent:true,opacity:.55});
-    const g=new T.Group(); scene.add(g);
-    function box(w,h,d,x,y,z,c,edges=true){
-      const m=new T.Mesh(new T.BoxGeometry(w,h,d),M(c)); m.position.set(x,y,z); g.add(m);
+    scene.add(new T.HemisphereLight(0xffffff,0x8a7f80,.62));
+    const sun=new T.DirectionalLight(0xffffff,.75); sun.position.set(6,10,8); sun.castShadow=true;
+    sun.shadow.mapSize.set(1024,1024); Object.assign(sun.shadow.camera,{left:-7,right:7,top:7,bottom:-7,near:1,far:30}); sun.shadow.bias=-.0008;
+    scene.add(sun);
+    const warm=new T.PointLight(0xffd9a8,.55,9); warm.position.set(0,1.9,0); 
+
+    // canvas textures: timber planks and ribbed cladding
+    function tex(w,h,draw,rx,ry){const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(rx,ry);return t}
+    const woodT=tex(256,256,(x,w,h)=>{x.fillStyle='#d7a36b';x.fillRect(0,0,w,h);for(let i=0;i<8;i++){x.fillStyle=i%2?'#cf9a60':'#dcaa74';x.fillRect(0,i*32,w,31);x.fillStyle='rgba(90,55,25,.35)';x.fillRect(0,i*32+31,w,1);x.fillRect((i*97)%w,i*32,1,32)}},3,2);
+    const cladT=tex(128,64,(x,w,h)=>{x.fillStyle='#4b4749';x.fillRect(0,0,w,h);for(let i=0;i<8;i++){x.fillStyle='#3a3638';x.fillRect(i*16,0,3,h);x.fillStyle='#5a5658';x.fillRect(i*16+3,0,2,h)}},6,1);
+    const M=(c,o={})=>new T.MeshStandardMaterial(Object.assign({color:c,roughness:.8,metalness:.04},o));
+    const edgeMat=new T.LineBasicMaterial({color:0x2a2627,transparent:true,opacity:.5});
+    const g=new T.Group(); scene.add(g); g.add(warm);
+    function box(w,h,d,x,y,z,mat,edges=false){
+      const m=new T.Mesh(new T.BoxGeometry(w,h,d),typeof mat==='number'?M(mat):mat); m.position.set(x,y,z); m.castShadow=m.receiveShadow=true; g.add(m);
       if(edges){const e=new T.LineSegments(new T.EdgesGeometry(m.geometry),edgeMat); e.position.copy(m.position); g.add(e);}
       return m;
     }
-    const W=6,D=4,H=2.2,t=.14;
-    box(W+.3,.22,D+.3,0,-.11,0,0xf3efe9);                 // slab edge
-    box(W,.04,D,0,.02,0,0xc9925a,false);                  // timber floor
-    box(W,H,t,0,H/2,-D/2,0xc9764a);                       // back wall (terracotta)
-    // left wall: dark cladding with a window opening
-    box(t,H,1.2,-W/2,H/2,-D/2+.6,0x4a4648); box(t,H,1.1,-W/2,H/2,D/2-.55,0x4a4648);
-    box(t,.55,1.7,-W/2,.275,0,0x4a4648); box(t,.45,1.7,-W/2,H-.225,0,0x4a4648);
-    const glass=new T.MeshStandardMaterial({color:0x9fb4c2,transparent:true,opacity:.45,roughness:.1,metalness:.2});
-    const gl=new T.Mesh(new T.BoxGeometry(.03,1.2,1.7),glass); gl.position.set(-W/2,1.15,0); g.add(gl);
-    for(let i=0;i<4;i++) box(.05,1.2,.04,-W/2,1.15,-.85+i*.567,0x2a2627,false);
-    // right wall: light, with tall window
-    box(t,H,1.4,W/2,H/2,-D/2+.7,0xf1ede8); box(t,H,1.2,W/2,H/2,D/2-.6,0xf1ede8);
-    box(t,.3,1.4,W/2,.15,.1,0xf1ede8); box(t,.3,1.4,W/2,H-.15,.1,0xf1ede8);
-    const gr=new T.Mesh(new T.BoxGeometry(.03,1.6,1.4),glass); gr.position.set(W/2,1.1,.1); g.add(gr);
-    // ceiling with a stepped bulkhead, cut away at the front
-    box(W+.3,.18,D+.3,0,H+.09,0,0xfbfaf8);
-    box(2.4,.22,D,1.6,H-.11,0,0xf6f3ef,false);
-    box(W+.3,.08,.25,0,H+.22,-D/2-.02,0x9b0c15,false);    // GSE red parapet line
-    // interior: desks, shelf, chairs
-    for(const [x,z] of [[-1.4,.2],[.6,.4],[1.9,-.6]]){ box(1.1,.05,.55,x,.74,z,0xfafafa); box(.04,.72,.5,x-.5,.37,z,0x8c8486,false); box(.04,.72,.5,x+.5,.37,z,0x8c8486,false); }
-    box(1.4,.9,.3,-.6,1.25,-D/2+.25,0x6b4a33); for(let i=0;i<3;i++) box(.2,.22,.18,-1.1+i*.45,1.42,-D/2+.25,[0x9b0c15,0x2a2627,0x5f7f99][i],false);
-    box(.5,.35,.05,.9,1.4,-D/2+.1,0xffffff,false);
-    // blueprint plate under the model
-    const plate=new T.Mesh(new T.PlaneGeometry(9,7),new T.MeshBasicMaterial({color:0x3b6e8f,transparent:true,opacity:.08})); plate.rotation.x=-Math.PI/2; plate.position.y=-.6;
-    const grid=new T.GridHelper(9,18,0x3b6e8f,0x3b6e8f); grid.material.transparent=true; grid.material.opacity=.25; grid.position.y=-.59;
+    const W=6.4,D=4.2,H=2.4,t=.16, white=0xf6f3ee;
+    // slab and timber floor
+    box(W+.4,.26,D+.4,0,-.13,0,white,true);
+    box(W,.03,D,0,.015,0,M(0xffffff,{map:woodT,roughness:.6}));
+    // back wall: terracotta with skirting
+    box(W,H,t,0,H/2,-D/2,0xc8724a); box(W,.1,.04,0,.05,-D/2+.1,white);
+    // left wall: ribbed dark cladding with a white-framed window, 3 x 2 panes
+    const clad=M(0xffffff,{map:cladT,roughness:.7});
+    const wx=-W/2, ww=2.0, wh=1.35, wy=1.25;
+    box(t,H,(D-ww)/2,wx,H/2,-D/2+(D-ww)/4,clad,true); box(t,H,(D-ww)/2,wx,H/2,D/2-(D-ww)/4,clad,true);
+    box(t,wy-wh/2,ww,wx,(wy-wh/2)/2,0,clad); box(t,H-(wy+wh/2),ww,wx,(wy+wh/2+H)/2,0,clad);
+    const glass=new T.MeshPhysicalMaterial({color:0xa9c3d3,transparent:true,opacity:.35,roughness:.05,metalness:.1});
+    const gl=new T.Mesh(new T.BoxGeometry(.02,wh,ww),glass); gl.position.set(wx,wy,0); g.add(gl);
+    for(let i=0;i<=3;i++) box(.06,wh,.05,wx,wy,-ww/2+i*ww/3,white);
+    for(let j=0;j<=2;j++) box(.06,.05,ww,wx,wy-wh/2+j*wh/2,0,white);
+    box(.22,.05,ww+.1,wx+.06,wy-wh/2-.03,0,white); // sill
+    // right wall: light render, tall window with curtains
+    const rx=W/2, rw=1.5;
+    box(t,H,(D-rw)/2,rx,H/2,-D/2+(D-rw)/4,0xefebe6,true); box(t,H,(D-rw)/2,rx,H/2,D/2-(D-rw)/4,0xefebe6,true);
+    box(t,.25,rw,rx,.125,0,0xefebe6); box(t,.3,rw,rx,H-.15,0,0xefebe6);
+    const gr=new T.Mesh(new T.BoxGeometry(.02,H-.55,rw),glass); gr.position.set(rx,(H-.05)/2+.1,0); g.add(gr);
+    for(let i=0;i<=2;i++) box(.06,H-.55,.05,rx,(H-.05)/2+.1,-rw/2+i*rw/2,white);
+    const drape=M(0xcdb792,{roughness:.95});
+    for(const z of [-rw/2-.12,rw/2+.12]) for(let k=0;k<5;k++) box(.08,H-.35,.07,rx-.16-(k%2)*.05,(H-.35)/2+.05,z+(k-2)*.06,drape);
+    box(.04,.04,rw+.8,rx-.18,H-.22,0,0x8c8486);
+    // ceiling: white slab, stepped bulkhead, track lights
+    box(W+.4,.2,D+.4,0,H+.1,0,white,true);
+    box(W*.42,.3,D,W*.29,H-.15,0,0xfbfaf8,true);
+    box(W+.4,.1,.22,0,H+.25,-D/2-.05,0x9b0c15);
+    box(.06,.06,D-.6,-.9,H-.04,0,0x2a2627);
+    for(let i=0;i<5;i++){const z=-D/2+.6+i*.75; box(.09,.16,.09,-.9,H-.15,z,0x1c1a1b); const sp=new T.Mesh(new T.CylinderGeometry(.05,.07,.06,12),new T.MeshBasicMaterial({color:0xfff2d6})); sp.position.set(-.9,H-.25,z); g.add(sp);}
+    // back wall details: shelving unit, framed pictures, clock, whiteboard
+    box(1.5,1.3,.32,-1.7,.75,-D/2+.25,0x6b4a33);
+    for(let r=0;r<3;r++){ box(1.42,.03,.3,-1.7,.32+r*.4,-D/2+.27,0x8a6446); for(let k=0;k<5;k++) box(.12,.26-(k%3)*.04,.2,-2.3+k*.26+(r*.07),.47+r*.4-(k%3)*.02,-D/2+.27,[0x9b0c15,0x2a2627,0x5f7f99,0xe0d6c4,0x3c6e4a][(k+r)%5]); }
+    box(.9,.6,.03,.3,1.55,-D/2+.1,0xffffff); box(.92,.62,.02,.3,1.55,-D/2+.09,0x8c8486);
+    for(const [x,y] of [[1.45,1.65],[1.95,1.65]]){box(.36,.46,.03,x,y,-D/2+.1,0x2a2627); box(.3,.4,.035,x,y,-D/2+.1,[0xd9c9a8,0xa9c3d3][x>1.6?1:0]);}
+    const clk=new T.Mesh(new T.CylinderGeometry(.16,.16,.03,24),M(0xffffff)); clk.rotation.x=Math.PI/2; clk.position.set(-.55,1.85,-D/2+.1); g.add(clk);
+    box(.02,.11,.01,-.55,1.89,-D/2+.12,0x111011); box(.08,.015,.01,-.52,1.85,-D/2+.12,0x111011);
+    // workstations: desks, monitors, chairs
+    function desk(x,z,rot){
+      const d=new T.Group(); d.position.set(x,0,z); d.rotation.y=rot||0; g.add(d);
+      const add=(w,h,dd,px,py,pz,c)=>{const m=new T.Mesh(new T.BoxGeometry(w,h,dd),M(c)); m.position.set(px,py,pz); m.castShadow=m.receiveShadow=true; d.add(m);};
+      add(1.3,.05,.65,0,.74,0,0xfafafa); add(.04,.72,.6,-.6,.37,0,0x9a9294); add(.04,.72,.6,.6,.37,0,0x9a9294); add(1.2,.3,.03,0,.55,-.3,0xd8d3cf);
+      add(.5,.32,.03,0,1.0,-.18,0x1c1a1b); add(.46,.28,.01,0,1.0,-.163,0x3c5a72); add(.05,.16,.05,0,.83,-.2,0x2a2627); add(.18,.02,.12,0,.77,-.2,0x2a2627);
+      add(.36,.02,.12,0,.77,.08,0x2a2627);
+      add(.46,.07,.44,0,.46,.55,0x9b0c15); add(.46,.48,.06,0,.72,.77,0x9b0c15); add(.05,.42,.05,0,.21,.55,0x2a2627); add(.4,.03,.05,0,.03,.55,0x2a2627);
+    }
+    desk(-.9,.35); desk(.7,.35); desk(1.9,-.55,-Math.PI/2);
+    const pot=new T.Mesh(new T.CylinderGeometry(.14,.11,.3,14),M(0xefebe6)); pot.position.set(2.7,.15,-1.6); pot.castShadow=true; g.add(pot);
+    const leaf=new T.Mesh(new T.SphereGeometry(.28,12,10),M(0x4f7a43)); leaf.position.set(2.7,.55,-1.6); leaf.castShadow=true; g.add(leaf);
+    // blueprint wireframe above: gable roof outline and dimension lines
+    const bp=new T.LineBasicMaterial({color:0x3b6e8f,transparent:true,opacity:.6});
+    const dash=new T.LineDashedMaterial({color:0x3b6e8f,dashSize:.14,gapSize:.1,transparent:true,opacity:.55});
+    function lines(pts,mat){const geo=new T.BufferGeometry().setFromPoints(pts.map(p=>new T.Vector3(...p))); const l=new T.LineSegments(geo,mat); if(mat.isLineDashedMaterial) l.computeLineDistances(); g.add(l); return l;}
+    const y0=H+.3, rH=1.5, hw=W/2+.2, hd=D/2+.2;
+    lines([[-hw,y0,-hd],[0,y0+rH,-hd],[0,y0+rH,-hd],[hw,y0,-hd],[-hw,y0,hd],[0,y0+rH,hd],[0,y0+rH,hd],[hw,y0,hd],[0,y0+rH,-hd],[0,y0+rH,hd],[-hw,y0,-hd],[-hw,y0,hd],[hw,y0,-hd],[hw,y0,hd]],bp);
+    lines([[-hw,y0,-hd],[hw,y0,hd],[hw,y0,-hd],[-hw,y0,hd]],dash);
+    lines([[-W/2,-.3,D/2+.6],[W/2,-.3,D/2+.6],[-W/2,-.42,D/2+.6],[-W/2,-.18,D/2+.6],[W/2,-.42,D/2+.6],[W/2,-.18,D/2+.6],[W/2+.6,-.3,-D/2],[W/2+.6,-.3,D/2],[W/2+.6,-.42,-D/2],[W/2+.6,-.18,-D/2],[W/2+.6,-.42,D/2],[W/2+.6,-.18,D/2]],bp);
+    // blueprint plate under the model, with a floor-plan grid
+    const plate=new T.Mesh(new T.PlaneGeometry(10,8),new T.MeshStandardMaterial({color:0xdfe7ec,transparent:true,opacity:.55})); plate.rotation.x=-Math.PI/2; plate.position.y=-.6; plate.receiveShadow=true;
+    const grid=new T.GridHelper(10,20,0x3b6e8f,0x3b6e8f); grid.material.transparent=true; grid.material.opacity=.22; grid.position.y=-.59;
     const base=new T.Group(); base.add(plate,grid); scene.add(base);
-    const shadow=new T.Mesh(new T.CircleGeometry(3.2,40),new T.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.12})); shadow.rotation.x=-Math.PI/2; shadow.position.y=-.58; scene.add(shadow);
-    g.position.y=.3;
+    g.position.y=.35;
     function size(){ const w=art.clientWidth,h=art.clientHeight; if(!w||!h) return; R.setSize(w,h,false); cam.aspect=w/h;
-      const tf=Math.tan(T.MathUtils.degToRad(cam.fov/2)), far=Math.max(5.2/(tf*cam.aspect),3.6/tf); cam.position.set(0,far*.45,far); cam.lookAt(w<860?0:-1,.3,0); cam.updateProjectionMatrix(); }
+      const tf=Math.tan(T.MathUtils.degToRad(cam.fov/2)), far=Math.max(5.1/(tf*cam.aspect),3.9/tf); cam.position.set(0,far*.2,far); cam.lookAt(w<860?0:-.9,1.25,0); cam.updateProjectionMatrix(); }
     size(); addEventListener('resize',size);
-    let rot=-.6, vel=reduce?0:.005, drag=null, visible=true, raf=0;
+    let rot=-.65, vel=reduce?0:.0045, drag=null, visible=true, raf=0;
     cv.addEventListener('pointerdown',e=>{drag={x:e.clientX,r:rot};cv.setPointerCapture(e.pointerId)});
     cv.addEventListener('pointermove',e=>{if(drag) rot=drag.r+(e.clientX-drag.x)*.01});
     const end=()=>{drag=null}; cv.addEventListener('pointerup',end); cv.addEventListener('pointercancel',end);
@@ -1009,7 +1054,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;
       if(!drag) rot+=vel;
       const k=(now-t0)/1000;
       g.rotation.y=rot; base.rotation.y=rot;
-      g.position.y=.3+(reduce?0:Math.sin(k*1.4)*.08); shadow.scale.setScalar(1-(g.position.y-.3)*.6);
+      g.position.y=.35+(reduce?0:Math.sin(k*1.3)*.07);
       R.render(scene,cam);
       raf=visible?requestAnimationFrame(frame):0;
     }
