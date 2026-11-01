@@ -60,14 +60,14 @@ header.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;backgroun
 .logo .tile{flex:none;display:grid;place-items:center;transition:transform .4s}
 .logo:hover .tile{transform:rotate(-8deg) scale(1.06)}
 .logo .tile img{width:auto;height:46px;filter:drop-shadow(0 0 10px rgba(230,40,52,.35))}
-.logo .word{font-family:var(--f-brand);font-weight:700;font-size:17px;letter-spacing:.04em;line-height:1.1;text-transform:uppercase}
+.logo .word{white-space:nowrap;font-family:var(--f-brand);font-weight:700;font-size:17px;letter-spacing:.04em;line-height:1.1;text-transform:uppercase}
 .logo .word small{display:block;font-family:var(--f-mono);font-weight:400;font-size:10px;letter-spacing:.32em;color:var(--red)}
-.nav ul{display:flex;gap:24px;list-style:none;margin:0;padding:0}
-.nav ul a{text-decoration:none;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#d9d2d3;position:relative;padding-block:6px}
+.nav ul{display:flex;gap:18px;list-style:none;margin:0;padding:0}
+.nav ul a{text-decoration:none;font-size:12.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#d9d2d3;position:relative;padding-block:6px}
 .nav ul a::after{content:"";position:absolute;left:0;bottom:0;height:2px;width:100%;background:var(--red);transform:scaleX(0);transform-origin:left;transition:transform .3s}
 .nav ul a:hover::after,.nav ul a.active::after{transform:scaleX(1)}
 .nav ul a.active{color:var(--white)}
-.btn{display:inline-flex;align-items:center;gap:10px;background:var(--crimson);color:var(--white);border:0;text-decoration:none;font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;padding:15px 22px;cursor:pointer;transition:background .25s;clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%)}
+.btn{white-space:nowrap;display:inline-flex;align-items:center;gap:10px;background:var(--crimson);color:var(--white);border:0;text-decoration:none;font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;padding:15px 22px;cursor:pointer;transition:background .25s;clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%)}
 .btn:hover{background:var(--red)}
 .btn .arr{transition:transform .25s}
 .btn:hover .arr{transform:translateX(4px)}
@@ -283,6 +283,11 @@ header.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;backgroun
 .node .role{font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--red)}
 .node h3{font-size:20px;font-weight:800;margin-top:4px;line-height:1.2;letter-spacing:0}
 .node p{color:#bdb3b4;font-size:14.5px;margin-top:4px}
+.org-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;width:100%;position:relative}
+.org-row.split::before{content:"";position:absolute;top:0;left:25%;right:25%;height:2px;background:var(--crimson)}
+.org-col{display:grid;grid-template-rows:auto 1fr;justify-items:center}
+.org-col>.node{height:100%}
+@media (max-width:640px){.org-row{grid-template-columns:minmax(0,1fr);gap:0}.org-row.split::before{display:none}.org-col:first-child>.link{display:none}}
 .link{width:2px;height:40px;background:linear-gradient(var(--crimson),var(--crimson)) top/100% 0 no-repeat,var(--line-dark);transition:background-size .8s}
 .link.in{background-size:100% 100%}
 .node.lead{background:var(--crimson);border-color:var(--crimson)}
@@ -698,7 +703,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;
   <div class="wrap">
     <div class="sec-head">
       <div><div class="eyebrow">Organization chart</div><h2>Management team</h2></div>
-      <p>A small, qualified team covering civil engineering, electronics, quantity surveying and accounts.</p>
+      <p>A small, qualified team covering civil engineering, information systems, construction management and accounts.</p>
     </div>
     <div class="org" id="org"></div>
   </div>
@@ -822,10 +827,10 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;
     {c:'HRDF', t:'Certified HRDF trainer', d:'Certified trainer under the Human Resources Development Fund (HRD Corp) for technical and management courses.', meta:['Certified trainer']}
   ];
   const team = [
-    {r:'Manager', n:'Muhammad Eddy Syafiq bin Jaafar', q:'Degree in Civil Engineering', i:'ES', lead:1},
-    {r:'Assistant Manager', n:'Zamhana binti Sabri', q:'Diploma in Electronic Engineering', i:'ZS'},
-    {r:'Supervisor', n:'Salbiah binti Suliman', q:'Diploma in Quantity Surveying', i:'SS'},
-    {r:'Clerk', n:'Aiman Afiq bin Jaafar', q:'Diploma in Accounting', i:'AA'}
+    [{r:'Manager', n:'Muhammad Eddy Syafiq bin Jaafar', q:'Degree in Civil Engineering', i:'ES', lead:1}],
+    [{r:'Assistant Manager', n:'Noorfatihah Hassan', q:'Degree in Information System Engineering', i:'NH'}],
+    [{r:'Account Executive', n:'Aiman Afiq bin Jaafar', q:'Diploma in Accounting', i:'AA'},
+     {r:'Supervisor', n:'Amira binti Ahmad Azes', q:'Degree in Construction Management', i:'AZ'}]
   ];
   const clientsA = ['Majlis Daerah Tanjung Malim','Pejabat Daerah dan Tanah Muallim','Jabatan Kerja Raya','Kementerian Pendidikan Malaysia','JAKOA'];
   const clientsB = ['CIDB','Akademi Teknologi Muallim','Politeknik Ungku Omar','Kolej Komuniti Tapah'];
@@ -844,7 +849,8 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;
     <circle cx="42" cy="42" r="22" fill="#fff"/><path d="M33 42l6 6 12-13" fill="none" stroke="#9b0c15" stroke-width="4" stroke-linecap="square"/></svg>`;
   document.getElementById('certGrid').innerHTML = certs.map((c,i)=>`<article class="cert reveal">${seal(c.c,i)}<h3>${c.c}</h3><div class="std">${c.t}</div><p>${c.d}</p><div class="meta">${c.meta.map(m=>`<span>${m}</span>`).join('')}</div></article>`).join('');
 
-  document.getElementById('org').innerHTML = team.map((t,i)=>(i?'<span class="link reveal"></span>':'')+`<article class="node reveal${t.lead?' lead':''}"><span class="ini">${t.i}</span><div><div class="role">${t.r}</div><h3>${t.n}</h3><p>${t.q}</p></div></article>`).join('');
+  const node=t=>`<article class="node reveal${t.lead?' lead':''}"><span class="ini">${t.i}</span><div><div class="role">${t.r}</div><h3>${t.n}</h3><p>${t.q}</p></div></article>`;
+  document.getElementById('org').innerHTML = team.map((lv,i)=>(i?'<span class="link reveal"></span>':'')+(lv.length>1?`<div class="org-row${lv.length>1?' split':''}">${lv.map(t=>'<div class="org-col"><span class="link reveal"></span>'+node(t)+'</div>').join('')}</div>`:node(lv[0]))).join('');
 
   const pl = n=>`<span class="pl"><i>${n.split(' ').filter(w=>/^[A-Z]/.test(w)).slice(0,2).map(w=>w[0]).join('')}</i>${n}</span>`;
   const fill=(id,arr)=>{const h=arr.map(pl).join('');document.getElementById(id).innerHTML=h+h.replace(/<span class="pl"/g,'<span aria-hidden="true" class="pl"');};
